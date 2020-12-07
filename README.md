@@ -1,1 +1,1 @@
-# `dphylr`: A collection of scripts and functions for phylogenetic analysis of DNA sequence data in `R`
+# `dphylr`: Phylogenetic analysis of DNA barcoding data in `R`

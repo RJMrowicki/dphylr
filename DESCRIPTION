@@ -1,15 +1,15 @@
 Package: dphylr
-Title: What the Package Does (One Line, Title Case)
+Title: Phylogenetic analysis of DNA barcoding data in `R`
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Rob",
+           family = "Mrowicki",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+           email = "robmro@mba.ac.uk",
+           comment = c(ORCID = "0000-0001-7767-9259"))
+Description: A collection of functions for phylogenetic analysis of DNA
+    barcoding data in `R`.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
