@@ -22,12 +22,15 @@
 #' get_cmasks()
 #' @export
 get_cmasks <- function (msa_obj, full_seq, gbmask) {
-  # locate position of first nucleotide base for each sequence:
-  seq_starts <- stringr::str_locate(msa_obj, "[A,C,G,T]")
-  # subset for the "full" sequence:
-  full_seq_start <- seq_starts[rownames(msa_obj) == full_seq, "start"]
+  seq_starts <-  # create matrix of sequence start positions
+    # locate the position of the first nucleotide base for each sequence:
+    stringr::str_locate(msa_obj, "[A,C,G,T]") %>%
+    # set rownames as sequence names:
+    magrittr::set_rownames(BiocGenerics::rownames(msa_obj))
+  full_seq_start <- seq_starts[full_seq, "start"]  # subset for 'full' sequence
+
   # the 'full' sequence may not start at position 1-3, therefore:
-  if (full_seq_start > 3) {
+  if (full_seq_start > 3) {  # if it starts beyond position 3,
     # determine sequence of codon numbers before full sequence start:
     left_cod_pos <- rev(rep_len(3:1, full_seq_start)[-full_seq_start])
     c1_start <- which(left_cod_pos == 1)[1]  # extract position of first '1'
@@ -35,20 +38,21 @@ get_cmasks <- function (msa_obj, full_seq, gbmask) {
     left_cod_pos <- NULL
     c1_start <- full_seq_start  # else use full sequence start position
   }
+
   # define the alignment width (total number of characters):
-  msa_width <- ncol(msa_obj)
+  msa_width <- BiocGenerics::ncol(msa_obj)
   # (NB -- Biostrings::maskedncol() for masked, nchar() for unmasked)
-  
+
   # define `IRanges` NormalRanges objects representing masks,
   # based on positions of codons 1, 2 and 3 in full alignment:
   # (NB -- defined using first codon1 position;
-  # otherwise these DO NOT represent true codon numbers, 
+  # otherwise these DO NOT represent true codon numbers,
   # UNLESS alignment is trimmed to start of coding region)
   mask_c1 <- IRanges::IRanges(start = seq(c1_start, msa_width, 3), width = 1)
   mask_c2 <- IRanges::IRanges(start = seq(c1_start+1, msa_width, 3), width = 1)
   mask_c1_c2 <- IRanges::IRanges(start = seq(c1_start, msa_width, 3), width = 2)
   mask_c3 <- IRanges::IRanges(start = seq(c1_start+2, msa_width, 3), width = 1)
-  
+
   # apply codon position masks to alignments:
   # create copies of alignment, for each codon position/combination:
   msa_c1 <- msa_c2 <- msa_c1_c2 <- msa_c3 <- msa_obj
@@ -60,7 +64,7 @@ get_cmasks <- function (msa_obj, full_seq, gbmask) {
   # (NB -- use `append = "union"` to combine with existing masks)
   # combine masked alignments into list:
   cmsas <- tibble::lst(c1 = msa_c1, c2 = msa_c2, c1_c2 = msa_c1_c2, c3 = msa_c3)
-  
+
   # # subset codon masks by Gblocks mask:
   # # (use these 'full' masks to define 'data blocks' in PartitionFinder,
   # # if using full (unmasked, pre-Gblocks) alignment as input)
@@ -68,7 +72,7 @@ get_cmasks <- function (msa_obj, full_seq, gbmask) {
   # mask_c2_gblocks <- IRanges::subsetByOverlaps(mask_c2, gbmask)
   # mask_c1_c2_gblocks <- IRanges::subsetByOverlaps(mask_c1_c2, gbmask)
   # mask_c3_gblocks <- IRanges::subsetByOverlaps(mask_c3, gbmask)
-  
+
   # subset codon masks by Gblocks mask,
   # and shift codon masks according to position in Gblocks 'chunks':
   # (use these 'collapsed' masks to define 'data blocks' in PartitionFinder,
@@ -77,19 +81,19 @@ get_cmasks <- function (msa_obj, full_seq, gbmask) {
   mask_c2_gblocks_col <- shift_cmask(mask_c2, gbmask)
   mask_c1_c2_gblocks_col <- shift_cmask(mask_c1_c2, gbmask)
   mask_c3_gblocks_col <- shift_cmask(mask_c3, gbmask)
-  
+
   # create overall `IRanges` IRangesList object of codon masks:
   cmasks <- IRanges::IRangesList(
     c1 = mask_c1_gblocks_col, c2 = mask_c2_gblocks_col, c3 = mask_c3_gblocks_col
   )
   # (NB -- exclude combined 'c1_c2' mask)
-  
+
   # extract positions of 1st, 2nd & 3rd codons in masked (Gblocks) alignment
   # (as vectors of single-position ranges), for later partitioning analyses:
-  cpos <- as.list(paste(
+  cpos <- IRanges::paste(
     BiocGenerics::start(cmasks), BiocGenerics::end(cmasks), sep = "-"
-  ))
-  
+  ) %>% IRanges::as.list()  # (NB -- output as generic [not IRanges] list)
+
   # return list containing codon masks, masked alignments, and position vectors:
   return(tibble::lst(cmasks, cmsas, cpos))
 }
