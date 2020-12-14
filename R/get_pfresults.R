@@ -19,7 +19,7 @@ get_pfresults <- function (pf_dir) {
     readr::read_lines(  # (NB -- skip empty rows)
       paste0(pf_dir,"analysis/best_scheme.txt"), skip_empty_rows = TRUE
     )
-  
+
   # ~ main results table:
   pf_nsubsets <-  # create object to store number of PF subsets
     stringr::str_subset(pf_out, "Number of subsets") %>%  # extract subsets line
@@ -43,7 +43,7 @@ get_pfresults <- function (pf_dir) {
     # remove comma+space between multiple partition names:
     dplyr::mutate(dplyr::across(
       "Partition names", ~ {  # replace strings within 'Partition names' column
-        stringr::str_replace(., ", ", "_")
+        stringr::str_replace_all(., ", ", "_")
       }))
 
   # ~ RAxML-NG partition definitions:
@@ -55,7 +55,7 @@ get_pfresults <- function (pf_dir) {
     # for each string, remove everything up to " = " (retain codon positions):
     purrr::map(., ~ { stringr::str_remove(., "^[^=]* = ") }) %>%
     purrr::flatten_chr()  # remove list hierarchy (convert into vector)
-  
+
   pf_raxmlngparts <-  # create vector of named RAxML-NG partition definitions
     paste0(  # for each partition, paste "model, part_name = positions"
       pf_results$'Best Model', ", ",
@@ -72,7 +72,7 @@ get_pfresults <- function (pf_dir) {
     # for each string, remove everything up to " = " (retain codon positions):
     purrr::map(., ~ { stringr::str_remove(., "^[^=]* = ") }) %>%
     purrr::flatten_chr()  # remove list hierarchy (convert into vector)
-  
+
   pf_mbparts <-  # create vector of named MrBayes partition definitions
     paste0(  # for each partition, paste "  CHARSET part_name = positions;"
       "  CHARSET ", pf_results$'Partition names', " = ", pf_out_mbparts
@@ -82,7 +82,7 @@ get_pfresults <- function (pf_dir) {
       seq_len(pf_nsubsets), pf_results$'Partition names', ~ {
         paste0("CHUNK", .x, ":", .y)  # paste "CHUNK<number>:<part_name>"
       })
-  
+
   pf_aln_sets <-  # create vector of NEXUS 'sets' block lines
     c(
       "BEGIN SETS;",
@@ -91,7 +91,7 @@ get_pfresults <- function (pf_dir) {
       paste0("  CHARPARTITION BYGENECODON = ",paste(chunks, collapse = ", "),";"),
       "END;"
     )
-  
+
   # return list containing results table, RAxML-NG & MrBayes partition def.s,
   # and NEXUS 'sets' block lines:
   return(tibble::lst(pf_results, pf_raxmlngparts, pf_mbparts, pf_aln_sets))
