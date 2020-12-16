@@ -94,7 +94,7 @@ concat_alns <- function (aln_main_dir, samp_seq_obj, cpart = FALSE) {
   alns_pos <-  # create vector of single-marker aln. start and end positions
     IRanges::paste(
       BiocGenerics::start(alns_masks), BiocGenerics::end(alns_masks), sep = "-"
-    ) %>% IRanges::as.list()  # (NB -- output as generic [not IRanges] list)
+    ) %>% IRanges::as.list()  # (NB -- output generic [not IRanges] list)
 
   if (cpart) {  # if partitioning by codon position,
     # (NB -- what to do if combining protein-coding and non-protein-coding
@@ -116,15 +116,25 @@ concat_alns <- function (aln_main_dir, samp_seq_obj, cpart = FALSE) {
       }) %>% set_names(names(alns))  # name according to markers
 
     alns_cpos <-  # create list of codon positions (as vectors of pos. ranges)
-      purrr::map_if(alns_cmasks, ~ !is.null(.), ~ {  # if element is not NULL,
-        IRanges::paste(
-          BiocGenerics::start(.), BiocGenerics::end(.), sep = "-"
-        ) %>% IRanges::as.list()  # (NB -- output as generic [not IRanges] list)
-      })  # otherwise, return original value (i.e. NULL)
+      purrr::map2(alns_cmasks, alns_pos,  ~ {  # for each single-marker aln.,
+        if (!is.null(.x)) {  # if codon masks have been specified,
+          IRanges::paste(
+            BiocGenerics::start(.x), BiocGenerics::end(.x), sep = "-"
+          ) %>% IRanges::as.list()  # (NB -- output generic [not IRanges] list)
+        } else {  # otherwise, if codon masks have not specified,
+          .y  # use marker start and end position
+        }
+      }) %>%
+      unlist(., recursive = FALSE) %>%  # flatten list
+      # replace "." in combined <marker.codon> list element names:
+      purrr::set_names(., ~ { stringr::str_replace(., "\\.", "_") })
 
-  } else {  # otherwise, define partitions by constituent markers only:
+  } else {  # otherwise, partitions are defined by constituent markers only:
     alns_cmasks <- alns_cpos <-  # create empty lists
-      vector("list", length(alns)) %>% purrr::set_names(names(alns))
+      vector("list", length(alns)*3) %>%
+      purrr::set_names(  # name by all combinations of marker and codon no.
+        paste(rep(names(alns), each = 3), c("c1","c2","c3"), sep = "_")
+      )
   }
 
   # return list containing the concatenated alignment, summary table of samp.
