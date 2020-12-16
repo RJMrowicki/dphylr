@@ -13,7 +13,7 @@
 #' @param rseed An integer to use as the random seed for analyses. If
 #'   unspecified, a random seed will be generated.
 #' @param nboot An integer specifying the number of bootstrap replicates for the
-#'   analysis.
+#'   analysis (default 1e+03).
 #' @param bscr_dir Path to the directory in which the RAxML-NG bash script will
 #'   be created.
 #' @param run If TRUE, the bash script is run in Windows Subsystem for Linux
