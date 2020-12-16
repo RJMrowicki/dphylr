@@ -9,7 +9,9 @@
 #' @param node_vals_lab A table containing node numbers (`node`) and
 #'   corresponding character string labels (`lab`). The node numbers must relate
 #'   to those in `tree_obj`.
-#' @param samp_seq_lab A table containing 
+#' @param samp_seq_lab A table of sequence codes (`seq_code`; must be the first
+#'   column) and corresponding tip labels (`tiplab`) as parsable character
+#'   strings.
 #' @param xext Factor by which to increase the plot width relative to its
 #'   original size (a value of 1 will result in an increase of 100%). This value
 #'   also determines the size and position of the species delimitation matrix,
@@ -27,15 +29,15 @@ plot_tree <- function (
   p0 <-  # initiate the plot and assign to object
     # (NB -- reduce line thickness; plot ladderised tree in correct orientation)
     ggtree::ggtree(tree_obj, size = 0.4, right = TRUE)
-  
+
   if (shorten_og) {  # if the outgroup(s) branch is to be shortened:
     og_node <- get_ognode(tree_obj, og)  # extract the outgroup(s) node number
     og_node_x <- dplyr::filter(pdat0, node==og_node)$x  # original og node xpos
     og_node_x_new <- og_node_x / 2  # shorten the node branch by 50%
-    
+
     # replace original value in plot data with new value:
     p0$data %<>% dplyr::mutate(x = replace(x, node == og_node, og_node_x_new))
-    
+
     if (length(og) > 1) {  # if there are multiple outgroups,
       og_x <- dplyr::filter(pdat0, label %in% og)$x  # original og branch xpos(s)
       og_bl <- og_x - og_node_x  # original outgroup branch length(s)
@@ -43,57 +45,57 @@ plot_tree <- function (
       # shorten og branch length(s), relative to mean xpos for other branches:
       og_bl_new <- og_bl * (mean(non_og_x) / mean(og_x))
       og_x_new <- og_node_x_new + og_bl_new  # convert into xpos
-      
+
       # replace original values in plot data with new values:
       p0$data %<>% dplyr::mutate(x = replace(x, label %in% og, og_x_new))
     }
   }
-  
+
   # apply outgroup clade grouping structure to tree, in order to use different
   # line styles for outgroup(s) (NB -- `groupOTU()` instead of `groupClade()`):
   p0 %<>% tidytree::groupOTU(get_ognode(tree_obj, og))
-  
-  
+
+
   # add combined ML boot and BI pp node labels to plot data:
   p0$data %<>% dplyr::left_join(
     dplyr::select(node_vals_lab, node, nodelab), by = "node")
-  
-  
+
+
   # extract current x limits:
   xlim0 <- ggplot2::ggplot_build(p0)$layout$panel_params[[1]]$x.range
   xdist0 <- diff(xlim0)  # calculate x distance
   # extract current y limits:
   ylim0 <- ggplot2::ggplot_build(p0)$layout$panel_params[[1]]$y.range
   ydist0 <- diff(ylim0)  # calculate y distance
-  
-  
+
+
   p <-  # extend the plot object
     # map data frame to tree for annotation
     # (NB -- requires sequence codes [= tip labels] to be in first column):
-    p0 %<+% dplyr::select(samp_seq_lab, seq_code, tidyselect::everything()) + 
-    
+    p0 %<+% dplyr::select(samp_seq_lab, seq_code, tidyselect::everything()) +
+
     # different line style for outgroup (specify manually):
     ggplot2::aes(linetype = group, show.legend = FALSE) +
     ggplot2::scale_linetype_manual(values = c("solid", "longdash")) +
     ggplot2::guides(linetype = FALSE) +  # (NB -- avoid legend in `gheatmap`)
-    
+
     # disable axis limit extension, expand b and r margins:
     ggplot2::coord_cartesian(expand = FALSE, clip = "off") +
     ggplot2::theme(plot.margin = margin(b = 0.75, unit = "cm")) +
     ggplot2::xlim(NA, xlim0[2] + xdist0 * xext) +  # extend x limits by `xext`
-    
+
     ggtree::geom_treescale(  # add scale bar
       x = 0, width = signif(0.15*xdist0, 1), linesize = 1) +
-    
+
     ggtree::geom_tiplab(  # add tip labels
       ggplot2::aes(  # `subset = grp != 0` for differential formatting
         subset = grp != 0, label = tiplab),  # non group0 samples
       parse = TRUE, align = FALSE, size = 3) +
     ggtree::geom_tiplab(  # add tip labels
-      ggplot2::aes( 
+      ggplot2::aes(
         subset = grp == 0, label = tiplab),  # group0 samples
       parse = TRUE, align = FALSE, size = 3, colour = "black") +
-    
+
     # geom_nodelab( # add customised node labels
     #   aes(x = branch, label = nodelab),
     #   hjust = 0.95, vjust = -0.55, size = 2.5) +
@@ -106,7 +108,7 @@ plot_tree <- function (
       nudge_x = -0.005*xdist0,  # nudge_y = 0.0025*ydist0,
       direction = "y", hjust = 1, vjust = -0.4, segment.size = 0.1, size = 2.5)
 
-  
+
   p +  # plot tree only
     ggplot2::theme(plot.margin = margin(t = lht/2, unit = "cm"))
 }

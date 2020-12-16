@@ -31,6 +31,7 @@ Imports:
     phytools (>= 0.7-70),
     purrr (>= 0.3.3),
     readr (>= 1.4.0),
+    stats (>= 4.0.3),
     stringr (>= 1.4.0),
     tibble (>= 3.0.4),
     tidyr (>= 1.1.2),
