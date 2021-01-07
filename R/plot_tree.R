@@ -32,16 +32,16 @@ plot_tree <- function (
 
   if (shorten_og) {  # if the outgroup(s) branch is to be shortened:
     og_node <- get_ognode(tree_obj, og)  # extract the outgroup(s) node number
-    og_node_x <- dplyr::filter(pdat0, node==og_node)$x  # original og node xpos
+    og_node_x <- dplyr::filter(p0$data, node==og_node)$x  # original og node xpos
     og_node_x_new <- og_node_x / 2  # shorten the node branch by 50%
 
     # replace original value in plot data with new value:
     p0$data %<>% dplyr::mutate(x = replace(x, node == og_node, og_node_x_new))
 
     if (length(og) > 1) {  # if there are multiple outgroups,
-      og_x <- dplyr::filter(pdat0, label %in% og)$x  # original og branch xpos(s)
+      og_x <- dplyr::filter(p0$data, label %in% og)$x  # original og branch xpos(s)
       og_bl <- og_x - og_node_x  # original outgroup branch length(s)
-      non_og_x <- dplyr::filter(pdat0, !label %in% og)$x  # non-og branch xpos(s)
+      non_og_x <- dplyr::filter(p0$data, !label %in% og)$x  # non-og branch xpos(s)
       # shorten og branch length(s), relative to mean xpos for other branches:
       og_bl_new <- og_bl * (mean(non_og_x) / mean(og_x))
       og_x_new <- og_node_x_new + og_bl_new  # convert into xpos
@@ -49,11 +49,17 @@ plot_tree <- function (
       # replace original values in plot data with new values:
       p0$data %<>% dplyr::mutate(x = replace(x, label %in% og, og_x_new))
     }
-  }
 
-  # apply outgroup clade grouping structure to tree, in order to use different
-  # line styles for outgroup(s) (NB -- `groupOTU()` instead of `groupClade()`):
-  p0 %<>% tidytree::groupOTU(get_ognode(tree_obj, og))
+    # apply outgroup clade grouping structure to tree, in order to use different
+    # line styles for outgroup(s) (NB -- `groupOTU()` instead of `groupClade()`?):
+    p0 %<>% tidytree::groupClade(get_ognode(tree_obj, og))
+
+    # apply different line style for outgroup (specify manually):
+    p0 <- p0 +
+      ggplot2::aes(linetype = group, show.legend = FALSE) +
+      ggplot2::scale_linetype_manual(values = c("solid", "longdash")) +
+      ggplot2::guides(linetype = FALSE)  # (NB -- avoid legend in `gheatmap`)
+  }
 
 
   # add combined ML boot and BI pp node labels to plot data:
@@ -74,11 +80,6 @@ plot_tree <- function (
     # (NB -- requires sequence codes [= tip labels] to be in first column):
     p0 %<+% dplyr::select(samp_seq_lab, seq_code, tidyselect::everything()) +
 
-    # different line style for outgroup (specify manually):
-    ggplot2::aes(linetype = group, show.legend = FALSE) +
-    ggplot2::scale_linetype_manual(values = c("solid", "longdash")) +
-    ggplot2::guides(linetype = FALSE) +  # (NB -- avoid legend in `gheatmap`)
-
     # disable axis limit extension, expand b and r margins:
     ggplot2::coord_cartesian(expand = FALSE, clip = "off") +
     ggplot2::theme(plot.margin = margin(b = 0.75, unit = "cm")) +
@@ -98,7 +99,7 @@ plot_tree <- function (
 
     # geom_nodelab( # add customised node labels
     #   aes(x = branch, label = nodelab),
-    #   hjust = 0.95, vjust = -0.55, size = 2.5) +
+    #   hjust = 0.95, vjust = -0.55, size = 2.5)
     ggrepel::geom_text_repel(  # add non-overlapping node labels
       ggplot2::aes(label = nodelab),  # use 'x = branch' for label on branch
       na.rm = TRUE,
@@ -106,7 +107,7 @@ plot_tree <- function (
       # # for `ggrepel::geom_label_repel()`:
       # label.padding = 0.1, label.size = 0, fill = adjustcolor("white", alpha = 0.75),
       nudge_x = -0.005*xdist0,  # nudge_y = 0.0025*ydist0,
-      direction = "y", hjust = 1, vjust = -0.4, segment.size = 0.1, size = 2.5)
+      direction = "y", hjust = 0.3, vjust = -0.2, segment.size = 0.1, size = 2.5)
 
 
   p +  # plot tree only
