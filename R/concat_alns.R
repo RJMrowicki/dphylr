@@ -68,8 +68,10 @@ concat_alns <- function (aln_main_dir, samp_seq_obj, cpart = FALSE) {
 
   aln_conc_samp_codes <-  # create summary table of samp. and seq. codes
     aln_samp_codes %>%  # using list of alignment samp./seq. codes,
-    # join tables by samp. code, name separate seq. code columns by marker:
-    purrr::reduce(full_join, by = "samp_code", suffix = paste0(".",names(.))) %>%
+    # for each list item, name seq. code column by marker (i.e. item name):
+    purrr::imap(., ~ {dplyr::rename(., 'seq_code.{.y}' := seq_code)}) %>%
+    # join tables by samp. code:
+    purrr::reduce(full_join, by = "samp_code") %>%
     # retain rows corresponding to shared sample codes only:
     dplyr::filter(., samp_code %in% shared_samp_codes)
 
