@@ -22,6 +22,18 @@
 #' get_cmasks()
 #' @export
 get_cmasks <- function (msa_obj, full_seq, gbmask) {
+  # extract full sequence as a DNAString object:
+  full_seq_string <- Biostrings::DNAStringSet(msa_obj)[[full_seq]]
+
+  if (stringr::str_detect(full_seq_string, "-")) {  # if full_seq contains gaps,
+    rlang::warn(paste0(  # produce a warning:
+      "`full_seq` contains gaps (starting at pos. ",
+      stringr::str_locate(full_seq_string, "-")[1],
+      "); calculated codon positions may be inaccurate.\n",
+      "Check the multiple sequence alignment."
+    ))
+  }
+
   seq_starts <-  # create matrix of sequence start positions
     # locate the position of the first nucleotide base for each sequence:
     stringr::str_locate(msa_obj, "[A,C,G,T]") %>%
