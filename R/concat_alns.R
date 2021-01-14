@@ -8,6 +8,9 @@
 #' @param aln_main_dir Path to the main directory containing all single-marker
 #'   alignments to be concatenated, each contained in a separate folder named
 #'   according to the marker, in FASTA format (named `mafft.fasta-gb`).
+#' @param sub_alns A character vector containing the names of the subset of
+#'   markers for which alignments are to be concatenated. If unspecified, all
+#'   single-marker alignments contained in `aln_main_dir` will be included.
 #' @param samp_seq_obj A table of sample codes (`samp_code`) and corresponding
 #'   sequence codes (`seq_code`), accounting for all sequences contained in the
 #'   single-marker alignments.
@@ -28,7 +31,9 @@
 #' @examples
 #' concat_alns()
 #' @export
-concat_alns <- function (aln_main_dir, samp_seq_obj, cpart = FALSE) {
+concat_alns <- function (
+  aln_main_dir, sub_alns = NULL, samp_seq_obj, cpart = FALSE
+) {
   alns <-  # create list of **post-Gblocks** single-marker alignments
     fs::dir_ls(aln_main_dir, type = "directory") %>%  # get aln. folder paths
     stringr::str_subset("conc", negate = TRUE) %>%  # remove "conc" directory
@@ -39,6 +44,10 @@ concat_alns <- function (aln_main_dir, samp_seq_obj, cpart = FALSE) {
         Biostrings::readDNAStringSet(paste0(.,"/mafft.fasta-gb"), format = "fasta")
       })
     )}
+
+  if (!is.null(sub_alns)) {  # if 'subset' aln. names are specified,
+    alns %<>% magrittr::extract(., sub_alns)  # subset the aln.s list
+  }
 
   aln_samp_codes <-  # create list of corresponding alignment sample codes
     purrr::map(alns, ~ {  # for each single-marker alignment,
