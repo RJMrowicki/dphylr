@@ -97,17 +97,17 @@ plot_tree <- function (
         subset = grp == 0, label = tiplab),  # group0 samples
       parse = TRUE, align = FALSE, size = 3, colour = "black") +
 
-    # geom_nodelab( # add customised node labels
-    #   aes(x = branch, label = nodelab),
-    #   hjust = 0.95, vjust = -0.55, size = 2.5)
-    ggrepel::geom_text_repel(  # add non-overlapping node labels
-      ggplot2::aes(label = nodelab),  # use 'x = branch' for label on branch
-      na.rm = TRUE,
-      box.padding = 0.01,  # default 0.25
-      # # for `ggrepel::geom_label_repel()`:
-      # label.padding = 0.1, label.size = 0, fill = adjustcolor("white", alpha = 0.75),
-      nudge_x = -0.005*xdist0,  # nudge_y = 0.0025*ydist0,
-      direction = "y", hjust = 0.3, vjust = -0.2, segment.size = 0.1, size = 2.5)
+    geom_nodelab(  # add customised node labels
+      aes(label = nodelab),  # use 'x = branch' for label on branch
+      hjust = 1.11, vjust = -0.5, size = 2.5)
+    # ggrepel::geom_text_repel(  # add non-overlapping node labels
+    #   ggplot2::aes(label = nodelab),  # use 'x = branch' for label on branch
+    #   na.rm = TRUE,
+    #   box.padding = 0.01,  # default 0.25
+    #   # # for `ggrepel::geom_label_repel()`:
+    #   # label.padding = 0.1, label.size = 0, fill = adjustcolor("white", alpha = 0.75),
+    #   nudge_x = -0.005*xdist0,  # nudge_y = 0.0025*ydist0,
+    #   direction = "y", hjust = 0.25, vjust = -0.25, segment.size = 0.1, size = 2.5)
 
 
   p +  # plot tree only
