@@ -15,17 +15,19 @@
 shift_cmask <- function (cmask, gbmask) {
   # extract Gblocks mask start position(s) and width(s):
   gbmask_starts <- BiocGenerics::start(gbmask)
-  gbmask_widths <- c(0, BiocGenerics::width(gbmask)) + 1  # first value 1
-  
+  gbmask_widths <- BiocGenerics::width(gbmask)
+  # calculate (cumulative sum + 1) widths, for relative shifting:
+  gbmask_cwidths <- c(0, cumsum(gbmask_widths)) + 1
+
   c_gb_shifts <-  # create list of results for each Gblocks "chunk"
     purrr::map(seq_along(gbmask), ~ {  # for each chunk (= `IRanges` range),
       # subset codon mask by Gblocks mask:
       c_gb <- IRanges::subsetByOverlaps(cmask, gbmask[.])
       # shift subsetted codon mask according to (1) position within Gblocks chunk
-      # and (2) width (+ 1) of previous Gblocks chunk (if multiple chunks)
-      IRanges::shift(c_gb, (-gbmask_starts[.] + gbmask_widths[.]))
+      # and (2) combined widths (+ 1) of previous Gblocks chunks (if multiple chunks)
+      IRanges::shift(c_gb, (-gbmask_starts[.] + gbmask_cwidths[.]))
     })
-  
+
   # combine into single `IRanges` IRangesList object and return result:
   unlist(IRanges::IRangesList(c_gb_shifts))
 }
