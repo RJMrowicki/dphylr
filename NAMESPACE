@@ -2,6 +2,7 @@
 
 export(align_mafft)
 export(concat_alns)
+export(diag_beast)
 export(excl_gblocks)
 export(get_cmasks)
 export(get_gbmask)
