@@ -34,8 +34,8 @@ comb_delim <- function(
     spp_abgd <-  # create data frame of ABGD group-seq. associations
       readr::read_lines(paste0(delim_dir,abgd_file)) %>%  # read ABGD `.html` results
       stringr::str_subset("Group\\[") %>%  # extract lines containing 'Groups' results
-      stringr::str_replace(".*id: (.+)<br>", "\\1") %>%  # extract sequence codes
-      # (`\\1` = string within [1st] brackets, i.e. between "...id: " & "<br>")
+      stringr::str_replace(".*id: (.+)<[bB][rR]>", "\\1") %>%  # extract sequence codes
+      # (`\\1` = string within [1st] brackets, i.e. between "...id: " & "<br>"/"<BR>")
       stringr::str_split(" ") %>%   # split by spaces (list of seq.s per group)
       purrr::imap_dfr(., ~ {  # for each group, create table of seq. codes
         tibble::tibble("ABGD" = .y, "seq_code" = .x)
