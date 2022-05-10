@@ -30,6 +30,7 @@ get_pfresults <- function (pf_dir) {
 
   pf_results <-  # create table containing main results
     pf_out[pf_out_tab0:(pf_out_tab0 + pf_nsubsets)] %>%  # extract the lines
+    I %>%  # inhibit object conversion (see `readr::read_delim()`)
     readr::read_delim(delim = "|", trim_ws = TRUE) %>%  # treat as delimited
     # change PartitionFinder model names to RAxML-NG model names (see
     # <https://github.com/amkozlov/raxml-ng/wiki/Input-data#evolutionary-model>

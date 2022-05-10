@@ -64,7 +64,7 @@ plot_tree <- function (
     p0 <- p0 +
       ggplot2::aes(linetype = group, show.legend = FALSE) +
       ggplot2::scale_linetype_manual(values = c("solid", "longdash")) +
-      ggplot2::guides(linetype = FALSE)  # (NB -- avoid legend in `gheatmap`)
+      ggplot2::guides(linetype = "none")  # (NB -- avoid legend in `gheatmap`)
   }
 
 
@@ -152,7 +152,8 @@ plot_tree <- function (
         # breaks = as.character(seq_len(n_sp_grps)),
         breaks = ggplot2::waiver(),  # use default breaks (scale limits)
         values = sp_colours(n_sp_grps),  # colour values from custom palette
-        guide = FALSE)
+        na.value = NA,  # ensure NA values are blank (default "grey50")
+        guide = "none")
 
   } else {
     p +  # plot tree only

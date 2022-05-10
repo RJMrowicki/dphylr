@@ -27,7 +27,7 @@ diag_beast <- function(
     # generate vector of log file names, including paths:
     fs::dir_ls(beast_dir, glob = "*.log") %>%
     purrr::map(., ~ {  # parse each log file and convert to `coda::mcmc` object:
-      dat <- tracerer::parse_beast_log(.)[, -1]  # NB -- remove `Sample`
+      dat <- tracerer::parse_beast_tracelog_file(.)[, -1]  # NB -- remove `Sample`
       tracerer::remove_burn_ins(dat, burnin) %>%  # discard % burnin
         coda::mcmc(., start = burnin*nrow(dat), end = nrow(dat))  # specify limits
     }) %>%
