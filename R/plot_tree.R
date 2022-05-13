@@ -10,9 +10,12 @@
 #' @param node_vals_lab A table containing node numbers (`node`) and
 #'   corresponding character string labels (`lab`). The node numbers must relate
 #'   to those in `tree_obj`.
-#' @param samp_seq_lab A table of sequence codes (`seq_code`; must be the first
-#'   column) and corresponding tip labels (`tiplab`) as parsable character
-#'   strings.
+#' @param samp_seq_lab A table of either sequence codes (`seq_code`) or sample
+#'   codes (`samp_code`, for concatenated sequence data) and corresponding tip
+#'   labels (`tiplab`) as parsable character strings.
+#' @param match_by Either "seq_code", for matching labels to `tree_obj` tips by
+#'   sequence code (default), or "samp_code", for matching labels by sample code
+#'   (for concatenated sequence data).
 #' @param xext Factor by which to increase the plot width relative to its
 #'   original size (a value of 1 will result in an increase of 100%). This value
 #'   also determines the size and position of the species delimitation matrix,
@@ -29,7 +32,8 @@
 #' plot_tree()
 #' @export
 plot_tree <- function (
-  tree_obj, og, shorten_og, node_vals_lab, samp_seq_lab,
+  tree_obj, og, shorten_og, node_vals_lab,
+  samp_seq_lab, match_by = c("seq_code", "samp_code"),
   xext = 0.5, lht = 0.5, plot_delim = FALSE, spp_delim
 ) {
   p0 <-  # initiate the plot and assign to object
@@ -84,8 +88,8 @@ plot_tree <- function (
 
   p <-  # extend the plot object
     # map data frame to tree for annotation
-    # (NB -- requires sequence codes [= tip labels] to be in first column):
-    p0 %<+% dplyr::select(samp_seq_lab, seq_code, tidyselect::everything()) +
+    # (NB -- requires seq/samp codes [= tip labels] to be in first column):
+    p0 %<+% dplyr::select(samp_seq_lab, match_by, tidyselect::everything()) +
 
     # disable axis limit extension, expand b and r margins:
     ggplot2::coord_cartesian(expand = FALSE, clip = "off") +
