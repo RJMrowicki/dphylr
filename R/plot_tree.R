@@ -16,6 +16,9 @@
 #' @param match_by Either "seq_code", for matching labels to `tree_obj` tips by
 #'   sequence code (default), or "samp_code", for matching labels by sample code
 #'   (for concatenated sequence data).
+#' @param p_width Plot width (in cm) used to determine the relative width of the
+#'   species delimitation matrix, if plotted. For square matrix cells, specify
+#'   the same width when using graphics output devices.
 #' @param xext Factor by which to increase the plot width relative to its
 #'   original size (a value of 1 will result in an increase of 100%). This value
 #'   also determines the size and position of the species delimitation matrix,
@@ -34,7 +37,7 @@
 plot_tree <- function (
   tree_obj, og, shorten_og, node_vals_lab,
   samp_seq_lab, match_by = c("seq_code", "samp_code"),
-  xext = 0.5, lht = 0.5, plot_delim = FALSE, spp_delim
+  p_width = 20, xext = 0.5, lht = 0.5, plot_delim = FALSE, spp_delim
 ) {
   p0 <-  # initiate the plot and assign to object
     # (NB -- reduce line thickness; plot ladderised tree in correct orientation)
@@ -138,7 +141,7 @@ plot_tree <- function (
       )
 
     # specify total width of species matrix *relative* to tree width:
-    hm_width <- (lht/20) * (1 + xext) * ncol(sp_grps)
+    hm_width <- (lht/p_width) * (1 + xext) * ncol(sp_grps)
     # (desired single column width [cm; = lht] / plot width [cm] *
     # tree width [1] + x extension width [relative to tree width]) *
     # no. of heatmap columns)
@@ -153,8 +156,8 @@ plot_tree <- function (
         width = hm_width, offset = hm_offset, color = "white",
         colnames_angle = -45, hjust = 0, font.size = 3) +
       ggplot2::scale_fill_manual(  # set matrix colours
-        # breaks = as.character(seq_len(n_sp_grps)),
-        breaks = ggplot2::waiver(),  # use default breaks (scale limits)
+        breaks = as.character(seq_len(n_sp_grps)),
+        # breaks = ggplot2::waiver(),  # use default breaks (scale limits)
         values = sp_colours(n_sp_grps),  # colour values from custom palette
         na.value = NA,  # ensure NA values are blank (default "grey50")
         guide = "none")
