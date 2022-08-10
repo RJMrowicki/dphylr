@@ -1,7 +1,7 @@
 #' Plot a tree
 #'
-#' Plot a labelled and formatted phylogenetic tree, optionally with a matrix
-#' summarising the results of species delimitation analyses.
+#' Plot a labelled and formatted phylogenetic tree, optionally with a matrix or
+#' bars summarising the results of species delimitation analyses.
 #'
 #' @param tree_obj A phylogenetic tree, in `ape` phylo format.
 #' @param og A character vector comprising the names of one or more sequences
@@ -24,9 +24,10 @@
 #'   also determines the size and position of the species delimitation matrix,
 #'   if plotted.
 #' @param lht Line height (in cm) for tree tips (and the species delimitation
-#'   heatmap, if plotted).
-#' @param plot_delim Should corresponding species delimitation results be
-#'   plotted as a group association matrix to the right of the tree?
+#'   matrix, if plotted).
+#' @param plot_delim Plot corresponding species delimitation results as either a
+#'   group association matrix ("matrix") or clade bars ("bars") to the right of
+#'   the tree; otherwise, do not include species delimitation results ("none").
 #' @param spp_delim A data frame containing the combined species-sample
 #'   association results from one or more delimitation analyses, as output by
 #'   `comb_delim()`.
@@ -37,7 +38,8 @@
 plot_tree <- function (
   tree_obj, og, shorten_og, node_vals_lab,
   samp_seq_lab, match_by = c("seq_code", "samp_code"),
-  p_width = 20, xext = 0.5, lht = 0.5, plot_delim = FALSE, spp_delim
+  p_width = 20, xext = 0.5, lht = 0.5,
+  plot_delim = c("matrix", "bars", "none"), spp_delim
 ) {
   p0 <-  # initiate the plot and assign to object
     # (NB -- reduce line thickness; plot ladderised tree in correct orientation)
@@ -65,7 +67,7 @@ plot_tree <- function (
 
     # apply outgroup clade grouping structure to tree, in order to use different
     # line styles for outgroup(s) (NB -- `groupOTU()` instead of `groupClade()`?):
-    p0 %<>% tidytree::groupClade(get_ognode(tree_obj, og))
+    p0 %<>% tidytree::groupClade(dphylr::get_ognode(tree_obj, og))
 
     # apply different line style for outgroup (specify manually):
     p0 <- p0 +
@@ -92,7 +94,7 @@ plot_tree <- function (
   p <-  # extend the plot object
     # map data frame to tree for annotation
     # (NB -- requires seq/samp codes [= tip labels] to be in first column):
-    p0 %<+% dplyr::select(samp_seq_lab, match_by, tidyselect::everything()) +
+    p0 %<+% dplyr::select(samp_seq_lab, tidyselect::all_of(match_by), tidyselect::everything()) +
 
     # disable axis limit extension, expand b and r margins:
     ggplot2::coord_cartesian(expand = FALSE, clip = "off") +
@@ -124,7 +126,8 @@ plot_tree <- function (
   #   direction = "y", hjust = 0.25, vjust = -0.25, segment.size = 0.1, size = 2.5)
 
 
-  if (plot_delim) {  # if plotting a species delimitation matrix (heatmap),
+  # if plotting a species delimitation matrix (heatmap),
+  if (plot_delim == "matrix") {
     # extract group association variables from delimitation results table and
     # **convert `seq_code` col to rownames** (required by `ggtree::gheatmap()`)
     sp_grps <- spp_delim %>% tibble::column_to_rownames("seq_code")
@@ -161,9 +164,71 @@ plot_tree <- function (
         values = sp_colours(n_sp_grps),  # colour values from custom palette
         na.value = NA,  # ensure NA values are blank (default "grey50")
         guide = "none")
+  }
 
-  } else {
-    p +  # plot tree only
+  # otherwise, if plotting species delimitation bars (clade groups),
+  if (plot_delim == "bars") {
+    # make a list of tree nodes representing species delimitation groups:
+    node_grps <- spp_delim %>%
+      # for all variables except `seq_code`,
+      purrr::map_at(., dplyr::vars(-seq_code), ~ {
+        # combine `seq_code` and variable (= delimitation group) into tibble:
+        tibble::tibble(seq_code = spp_delim$seq_code, delim_grp = .) %>%
+          # remove NAs (i.e. outgroup rows):
+          tidyr::drop_na() %>%
+          # split `seq_code` into list by delimitation group:
+          dplyr::group_by(delim_grp) %>%
+          # for each group of seq_codes,
+          dplyr::group_map(., ~ {
+            # obtain the tree node corresponding to that group:
+            dphylr::get_ognode(tree_obj, dplyr::pull(.))
+          }) %>%
+          # flatten list and convert into tibble column:
+          unlist %>% dplyr::as_tibble() %>%
+          # convert rownames (= group) to column, and rename columns:
+          tibble::rownames_to_column() %>% rlang::set_names("grp", "nnode") %>%
+          # add dummy column for blank `ggtree::geom_cladelab()` labels:
+          tibble::add_column(grp_lab = NA)
+      }) %>%
+      # remove element `seq_code` from the list:
+      purrr::list_modify("seq_code" = NULL)
+
+    # obtain the taxon name corresponding to the last (bottom) tip:
+    last_taxon <- dplyr::last(ggtree::get_taxa_name(p))
+    # obtain the corresponding tree node:
+    lab_node <- dphylr::get_ognode(tree_obj, last_taxon)
+
+    # set bar offset increment (= distance between bar groups):
+    bar_offset_increment <- 0.02 * xdist0*(1 + xext)
+    # (2% * total plot width (in terms of *x units*))
+    # set initial offset for clade bars:
+    bar_offset <- xdist0*xext - ((length(node_grps)-1) * bar_offset_increment)
+    # (max x limit - ((no. sets of delimitation groups - 1) * bar offset increment))
+
+    for (i in names(node_grps)) {  # for each set of delimitation groups,
+      p <- p +
+        ggtree::geom_cladelab(  # add clade labels (bar only)
+          data = node_grps[[i]],
+          mapping = aes(node = nnode, label = grp_lab),
+          barcolor = grey(0.25), barsize = 3, extend = 0.35,
+          textcolour = "transparent", align = TRUE, offset = bar_offset
+        ) +
+        ggtree::geom_cladelab(  # add delimitation method label
+          node = lab_node, label = paste0("     ", i), angle = -90,
+          barsize = 0, align = TRUE, offset = bar_offset,
+          fontsize = 2.5, offset.text = 0, vjust = 1
+        )
+      # increase clade bar offset by increment:
+      bar_offset <- bar_offset + bar_offset_increment
+    }
+
+    p +  # plot tree (set top and bottom margins)
+      ggplot2::theme(plot.margin = margin(t = lht/2, b = lht, unit = "cm"))
+  }
+
+  # otherwise, if not including species delimitation results:
+  if (plot_delim == "none") {
+    p +  # plot tree only (set top margin)
       ggplot2::theme(plot.margin = margin(t = lht/2, unit = "cm"))
   }
 }
