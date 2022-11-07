@@ -20,25 +20,51 @@ match_pp_boot <- function (bi_tree, ml_tree) {
   # extract subtrees for BI and ML trees:
   bi_st <- ape::subtrees(bi_tree)
   ml_st <- ape::subtrees(ml_tree)
-  
-  node_pp_boot <-  # create table of node no.s and BI posterior probabilities
-    dplyr::tibble(
-      node = seq_len(bi_tree$Nnode) + (1 + bi_tree$Nnode),  # node numbers
-      pp = bi_tree$node.label  # node posterior probabilities
-    )
-  
-  node_pp_boot$boot <-  # add column for corresponding ML bootstrap values
-    purrr::map_dbl(bi_st, ~ {  # for each BI subtree (i.e. node),
-      # (NB -- return final value as a numeric vector)
-      purrr::imap_dbl(ml_st, function(.m, .n) {  # for each ML subtree (i.e. node),
-        # (NB -- uses `seq_along(.x` as second argument; return numeric vector)
-        if (setequal(.x$tip.label, .m$tip.label)) {  # if tip labels are equal,
-          ml_tree$node.label[.n]  # extract the corresponding ML node label
-        } else { NA_real_ }  # else output numerical NA (required for `_dbl`)
-      }) %>% .[!is.na(.)] %>%  # extract non-NA values only
-        .[1]  # return the value or, where the value is `integer(0)`, NA
+
+  bi_node_pp <-  # create table of BI node no.s and posterior probabilities
+    ggplot2::fortify(bi_tree) %>%  # extract data table
+    # remove rows corresponding to tip 'nodes' (i.e. retain internal nodes):
+    dplyr::filter(isTip == FALSE) %>%
+    # select `node` and `label` (rename to `pp`) columns only:
+    dplyr::select(node, pp = label)
+
+  ml_node_boot <-  # create table of ML node no.s and bootstrap values
+    ggplot2::fortify(ml_tree) %>%  # extract data table
+    # remove rows corresponding to tip 'nodes' (i.e. retain internal nodes):
+    dplyr::filter(isTip == FALSE) %>%
+    # select `node` and `label` (rename to `boot`) columns only:
+    dplyr::select(node, boot = label)
+
+  bi_node_boot <-  # create table of BI node no.s and ML bootstrap values
+    purrr::map_dfr(bi_st, function(.b) {  # for each BI subtree (i.e. node),
+      # (NB -- return final value as a data frame by binding rows)
+      # determine the corresponding node number on the original BI tree:
+      bi_node <- dphylr::get_ognode(bi_tree, .b$tip.label)
+      # determine which ML subtrees (if any) contain matching tip labels:
+      match_ml <- purrr::map_lgl(ml_st, ~ { setequal(.b$tip.label, .$tip.label) })
+      # (NB -- returns logical string to use as predicate in `purrr::map_if()`)
+
+      # for each ML subtree (i.e. node), if tip labels are equal,
+      boot_val <- purrr::map_if(ml_st, .p = match_ml, function(.m) {
+        # determine the corresponding node no. on the original ML tree:
+        ml_node <- dphylr::get_ognode(ml_tree, .m$tip.label)
+        # extract the corresponding ML bootstrap value:
+        ml_node_boot$boot[ml_node_boot$node == ml_node]
+      }, .else = NA_character_) %>%  # else output character NA (results in NULL)
+        flatten_chr %>% .[!is.null(.)]  # extract non-NULL values only
+
+      # output combined BI node no. and ML bootstrap value:
+      tibble::tibble(node = bi_node, boot = boot_val)
     })
-  
+
+  suppressWarnings(
+    bi_node_pp_boot <-
+      # merge BI posterior probabilities and ML bootstrap values:
+      dplyr::left_join(bi_node_pp, bi_node_boot, by = "node") %>%
+      # format columns as numerical (generates warnings if char. values present):
+      dplyr::mutate(dplyr::across(c(pp, boot), as.numeric))
+  )
+
   # output table of node no.s, posterior probabilities and bootstrap values:
-  return(node_pp_boot)
+  return(bi_node_pp_boot)
 }
